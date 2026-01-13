@@ -2,5 +2,7 @@
 IRCCyN_IVC_DIBR_Videos/
 Subjective_Data/
 
+config.py
+
 # Archive
 Subjective_Data.zip
