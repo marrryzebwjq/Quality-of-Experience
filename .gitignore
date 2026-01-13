@@ -2,7 +2,14 @@
 IRCCyN_IVC_DIBR_Videos/
 Subjective_Data/
 
-config.py
-
 # Archive
 Subjective_Data.zip
+
+# Config files
+config.py
+
+# Local settings
+.python-version
+
+# Cache
+__pycache__/
