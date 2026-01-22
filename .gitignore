@@ -13,3 +13,7 @@ config.py
 
 # Cache
 __pycache__/
+
+# Environments
+venv/
+psychopy_env/
