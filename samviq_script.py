@@ -37,7 +37,7 @@ if not dlg.OK:
 # ===== CRÉATION DE LA FENÊTRE =====
 win = visual.Window(
     size=[1920, 1080],
-    fullscr=False,  # TEMPORAIRE: désactiver fullscreen pour debug
+    fullscr=True,
     units='height',
     color=[0, 0, 0]
 )
@@ -237,6 +237,7 @@ def show_video(video_path):
         
         frame_count = 0
         clock = core.Clock()
+        next_t = 0.0
         
         while True:
             ret, frame = cap.read()
@@ -274,11 +275,14 @@ def show_video(video_path):
                 print(f"[DEBUG] Vidéo arrêtée par l'utilisateur après {frame_count} frames")
                 break
             
-            # Attendre pour maintenir le framerate
-            elapsed = clock.getTime()
-            if elapsed < frame_delay:
-                core.wait(frame_delay - elapsed)
-            clock.reset()
+            # Cadencer à fps nominal sans ralentir (wait seulement si en avance)
+            next_t += frame_delay
+            wait_time = next_t - clock.getTime()
+            if wait_time > 0:
+                core.wait(wait_time)
+            else:
+                # Si on est en retard, recaler pour éviter d'accumuler
+                next_t = clock.getTime()
         
         cap.release()
         print(f"[DEBUG] Vidéo terminée ({frame_count} frames)")
