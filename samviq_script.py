@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Expérience SAMVIQ pour PsychoPy
-6 références × 6 conditions (original + 5 distorsions)
+6 références (3 sources x 2 caméras) × 6 conditions (original + 5 algorithmes de distorsion)
 """
 
 from psychopy import visual, core, event, data, gui
@@ -10,14 +10,23 @@ from psychopy.hardware import keyboard
 import random
 import os
 import pandas as pd
+import numpy as np
+import cv2
+
+# Forcer le backend vidéo à opencv (meilleur pour les fichiers AVI)
+from psychopy import prefs
+prefs.hardware['audioLib'] = ['ptb', 'sounddevice', 'pyo', 'pygame']
+prefs.hardware['videoLib'] = ['opencv', 'moviepy', 'ffpyplayer']
 
 # ===== CONFIGURATION =====
-# Définir vos fichiers vidéo ici
-REFERENCES = [f'ref{i+1}' for i in range(6)]  # ref1, ref2, ..., ref6
-CONDITIONS = ['original', 'dist1', 'dist2', 'dist3', 'dist4', 'dist5']
-
-# Chemin vers vos vidéos (à adapter)
-VIDEO_FOLDER = 'videos/'  # Modifier selon votre structure
+ORIGINALS = ['Left']
+REFERENCES = ['Center_Book_arrival', 'Right_Book_arrival',
+              'Center_Lovebird',     'Right_Lovebird',
+              'Center_Newspaper',    'Right_Newspaper']
+CONDITIONS = ['Original', 'Fehn_c', 'Fehn_i', 'Holes', 'ICIP_TMM', 'ICME']
+VIDEO_FOLDER = r'IRCCyN_IVC_DIBR_Videos\Videos'
+CSV_PATH = r'results'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ===== BOÎTE DE DIALOGUE =====
 exp_info = {'participant': '', 'session': '01'}
@@ -28,7 +37,7 @@ if not dlg.OK:
 # ===== CRÉATION DE LA FENÊTRE =====
 win = visual.Window(
     size=[1920, 1080],
-    fullscr=True,
+    fullscr=False,  # TEMPORAIRE: désactiver fullscreen pour debug
     units='height',
     color=[0, 0, 0]
 )
@@ -56,6 +65,9 @@ Appuyez sur ESPACE pour commencer""",
 
 # ===== GÉNÉRATION DES TRIALS =====
 trials_list = []
+
+# originales TODO
+
 for ref in REFERENCES:
     # Créer une liste des conditions pour cette référence
     cond_list = CONDITIONS.copy()
@@ -137,13 +149,61 @@ def create_rating_interface(labels):
     
     return buttons, sliders, button_labels
 
+def find_video(originals, ref, condition, data):
+    to_cam_position, video_label = ref.split('_', 1)
+    if condition == 'Original':
+        filtre = (
+            (data['Algo'] == condition) &
+            (data['from_cam_position'] == originals) &
+            (data['Video'].str.contains(video_label, case=False, na=False))
+        )
+    else :
+        filtre = (
+            (data['Algo'] == condition) &
+            (data['from_cam_position'] == originals) &
+            (data['to_cam_position'] == to_cam_position) &
+            (data['Video'].str.contains(video_label, case=False, na=False))
+        )
+    candidates = data.loc[filtre, 'Video_path']
+    if candidates.empty:
+        print(f"No video found for {originals}, {ref}, {condition}")
+    return candidates.iloc[0] if not candidates.empty else None
+
+def resolve_video_path(video_path):
+    """Resolve a potentially relative/CSV-provided path to an existing file.
+    Tries several candidates under the project and VIDEO_FOLDER.
+    """
+    if not video_path:
+        return None
+    p = os.path.normpath(str(video_path))
+    candidates = []
+
+    # As-is (absolute or relative from CWD)
+    candidates.append(p)
+
+    # Relative to project base
+    candidates.append(os.path.normpath(os.path.join(BASE_DIR, p)))
+
+    # Under configured VIDEO_FOLDER (accept filename or subpath)
+    video_dir_abs = os.path.normpath(os.path.join(BASE_DIR, VIDEO_FOLDER))
+    candidates.append(os.path.normpath(os.path.join(video_dir_abs, p)))
+    candidates.append(os.path.normpath(os.path.join(video_dir_abs, os.path.basename(p))))
+
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    # Not found
+    print(f"[SAMVIQ] Video file not found. Tried: {candidates}")
+    return None
+
 def show_video(video_path):
-    """Affiche une vidéo"""
-    if not os.path.exists(video_path):
-        # Si la vidéo n'existe pas, afficher un message
+    """Affiche une vidéo en utilisant OpenCV directement"""
+    resolved = resolve_video_path(video_path)
+    if not resolved:
+        # Fichier introuvable: afficher un message explicite
         msg = visual.TextStim(
             win,
-            text=f"Vidéo simulée:\n{video_path}\n\n(Appuyez sur ESPACE)",
+            text=f"Fichier vidéo introuvable:\n{video_path}\n\nVérifiez le chemin et le dossier 'IRCCyN_IVC_DIBR_Videos/\nVideos'.\n(Appuyez sur ESPACE)",
             height=0.04
         )
         msg.draw()
@@ -151,19 +211,97 @@ def show_video(video_path):
         event.waitKeys(keyList=['space'])
         return
     
+    print(f"[DEBUG] Lecture de: {resolved}")
+    
     try:
-        movie = visual.MovieStim(win, video_path, size=[1.6, 0.9])
-        while movie.status != visual.FINISHED:
-            movie.draw()
-            win.flip()
-            if 'escape' in event.getKeys():
-                movie.stop()
+        # Ouvrir la vidéo avec OpenCV directement
+        cap = cv2.VideoCapture(resolved)
+        
+        if not cap.isOpened():
+            raise Exception("Impossible d'ouvrir la vidéo avec OpenCV")
+        
+        # Obtenir les propriétés
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps <= 0:
+            fps = 25  # Valeur par défaut
+        frame_delay = 1.0 / fps
+        
+        print(f"[DEBUG] FPS: {fps}, frame_delay: {frame_delay}s")
+        
+        # Créer un stimulus image pour afficher les frames
+        img_stim = visual.ImageStim(
+            win,
+            size=(1.6, 0.9),
+            pos=(0, 0)
+        )
+        
+        frame_count = 0
+        clock = core.Clock()
+        
+        while True:
+            ret, frame = cap.read()
+            
+            if not ret:
+                print(f"[DEBUG] Fin de la vidéo après {frame_count} frames")
                 break
+            
+            # Convertir BGR (OpenCV) en RGB (PsychoPy)
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Inverser verticalement (OpenCV lit à l'envers pour PsychoPy)
+            frame_rgb = cv2.flip(frame_rgb, 0)
+            
+            # Normaliser à [0, 1] pour PsychoPy
+            frame_norm = frame_rgb.astype(float) / 255.0
+            
+            # Mettre à jour le stimulus
+            img_stim.image = frame_norm
+            
+            # Afficher
+            win.clearBuffer()
+            img_stim.draw()
+            win.flip()
+            
+            frame_count += 1
+            
+            # Debug première frame
+            if frame_count == 1:
+                print(f"[DEBUG] Première frame affichée - shape: {frame_rgb.shape}")
+            
+            # Vérifier les touches
+            keys = event.getKeys()
+            if 'escape' in keys or 'space' in keys:
+                print(f"[DEBUG] Vidéo arrêtée par l'utilisateur après {frame_count} frames")
+                break
+            
+            # Attendre pour maintenir le framerate
+            elapsed = clock.getTime()
+            if elapsed < frame_delay:
+                core.wait(frame_delay - elapsed)
+            clock.reset()
+        
+        cap.release()
+        print(f"[DEBUG] Vidéo terminée ({frame_count} frames)")
+        
     except Exception as e:
-        print(f"Erreur lors de la lecture de {video_path}: {e}")
+        print(f"[ERREUR] Lecture de {resolved}: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Afficher un message d'erreur à l'utilisateur
+        error_msg = visual.TextStim(
+            win,
+            text=f"Erreur de lecture vidéo:\n{str(e)}\n\n(Appuyez sur ESPACE)",
+            height=0.03,
+            color='red'
+        )
+        error_msg.draw()
+        win.flip()
+        event.waitKeys(keyList=['space'])
 
 # ===== BOUCLE PRINCIPALE =====
 all_results = []
+df_videos = pd.read_csv(CSV_PATH + "/df_videos_processed.csv")
 
 for trial_num, trial in enumerate(trials_list, 1):
     ref = trial['reference']
@@ -195,7 +333,7 @@ for trial_num, trial in enumerate(trials_list, 1):
         pos=[0, -0.45],
         height=0.03
     )
-    
+                                                                #### TODO
     # Mapping label -> condition
     label_to_condition = {labels[i]: conditions[i] for i in range(len(labels))}
     
@@ -223,7 +361,8 @@ for trial_num, trial in enumerate(trials_list, 1):
             for i, button in enumerate(buttons):
                 if button.contains(pos):
                     condition = label_to_condition[labels[i]]
-                    video_file = f"{VIDEO_FOLDER}{ref}_{condition}.mp4"
+                    #video_file = f"{VIDEO_FOLDER}{ref}_{condition}.mp4"
+                    video_file = find_video(ORIGINALS[0], ref, condition, df_videos)
                     show_video(video_file)
                     core.wait(0.3)  # Anti-rebond
             
