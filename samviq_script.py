@@ -129,19 +129,24 @@ Appuyez sur ESPACE pour commencer le test""",
     
     # Créer un trial de test avec 3 vidéos
     test_labels = ['A', 'B', 'C']
-    buttons, sliders, button_labels = create_rating_interface(test_labels[:3])
-    
+    #buttons, sliders, button_labels = create_rating_interface(test_labels[:3])
+    buttons, sliders, button_labels, slider_values, ref_button, ref_label = create_rating_interface(test_labels[:3])
+
+    # Vidéo de référence test (caméra originale)
+    test_ref_video = os.path.join(VIDEO_TEST, "Book_arrival_cam_08.avi")
+
     # Adapter la position pour 3 vidéos au lieu de 6
     for i in range(3):
         x_pos = -0.25 + i * 0.25
-        buttons[i].pos = [x_pos, 0.35]
-        button_labels[i].pos = [x_pos, 0.35]
+        buttons[i].pos = [x_pos, 0.2]
+        button_labels[i].pos = [x_pos, 0.20]
         sliders[i].pos = [x_pos, -0.05]
-    
+        slider_values[i].pos = [x_pos, -0.30]
+
     trial_text = visual.TextStim(
         win,
-        text="PHASE DE TEST\n\nCliquez sur les boutons pour voir les vidéos de test",
-        pos=[0, 0.45],
+        text="PHASE DE TEST\n\nCliquez sur les boutons pour voir les vidéos de test\nCliquez sur REF pour voir la référence",
+        pos=[0, 0.40],
         height=0.03
     )
     
@@ -169,6 +174,15 @@ Appuyez sur ESPACE pour commencer le test""",
             buttons[i].draw()
             button_labels[i].draw()
             sliders[i].draw()
+            # Mettre à jour la valeur affichée du slider
+            if sliders[i].rating is not None:
+                slider_values[i].text = f'{int(sliders[i].rating)}'
+            else:
+                slider_values[i].text = '--'
+            slider_values[i].draw()
+        
+        ref_button.draw()
+        ref_label.draw()
         
         next_button.draw()
         next_label.draw()
@@ -187,6 +201,11 @@ Appuyez sur ESPACE pour commencer le test""",
 
                     show_video(test_video)
                     core.wait(0.3)
+
+            # Bouton référence
+            if ref_button.contains(pos):
+                show_video(test_ref_video)
+                core.wait(0.3)
             
             # Vérifier le bouton suivant
             if next_button.contains(pos):
@@ -236,12 +255,37 @@ def create_rating_interface(labels):
     buttons = []
     sliders = []
     button_labels = []
+    slider_values = []
     
-    y_start = 0.35
+    y_start = 0.2
     button_width = 0.12
     button_height = 0.06
     spacing = 0.15
     
+
+    # Bouton de référence
+    ref_button = visual.Rect(
+        win,
+        width=0.15,
+        height=0.08,
+        pos=[-0.65, 0.35],
+        fillColor='darkred',
+        lineColor='white',
+        lineWidth=2
+    )
+    
+    ref_label = visual.TextStim(
+        win,
+        text='REF',
+        pos=[-0.65, 0.35],
+        height=0.035,
+        color='white',
+        bold=True
+    )
+
+
+
+
     for i, label in enumerate(labels):
         x_pos = -0.4 + i * spacing
         
@@ -279,8 +323,20 @@ def create_rating_interface(labels):
             markerColor='red'
         )
         sliders.append(slider)
+        
+        # Affichage de la valeur du slider
+        value_text = visual.TextStim(
+            win,
+            text='--',
+            pos=[x_pos, -0.30],
+            height=0.025,
+            color='white',
+            bold=True
+        )
+        slider_values.append(value_text)
     
-    return buttons, sliders, button_labels
+    
+    return buttons, sliders, button_labels, slider_values, ref_button, ref_label
 
 def find_video(originals, ref, condition, data):
     to_cam_position, video_label = ref.split('_', 1)
@@ -447,15 +503,16 @@ for trial_num, trial in enumerate(trials_list, 1):
     ref = trial['reference']
     conditions = trial['conditions']
     labels = trial['labels']
+    ref_video_file = find_video(ORIGINALS[0], ref, 'Original', df_videos)
     
     # Créer l'interface
-    buttons, sliders, button_labels = create_rating_interface(labels)
-    
+    buttons, sliders, button_labels, slider_values, ref_button, ref_label = create_rating_interface(labels)
+
     # Instructions pour ce trial
     trial_text = visual.TextStim(
         win,
-        text=f"Référence {trial_num}/{len(trials_list)}: {ref}\n\nCliquez sur les boutons pour voir les vidéos",
-        pos=[0, 0.45],
+        text=f"Référence {trial_num}/{len(trials_list)}:\n\nCliquez sur les boutons pour voir les vidéos\nCliquez sur REF pour revoir la référence",
+        pos=[0, 0.40],
         height=0.03
     )
     
@@ -487,6 +544,16 @@ for trial_num, trial in enumerate(trials_list, 1):
             buttons[i].draw()
             button_labels[i].draw()
             sliders[i].draw()
+            
+            # Mettre à jour et afficher la valeur du slider
+            if sliders[i].rating is not None:
+                slider_values[i].text = f'{int(sliders[i].rating)}'
+            else:
+                slider_values[i].text = '--'
+            slider_values[i].draw()
+        
+        ref_button.draw()
+        ref_label.draw()
         
         next_button.draw()
         next_label.draw()
@@ -505,6 +572,11 @@ for trial_num, trial in enumerate(trials_list, 1):
                     video_file = find_video(ORIGINALS[0], ref, condition, df_videos)
                     show_video(video_file)
                     core.wait(0.3)  # Anti-rebond
+
+            # Bouton référence
+            if ref_button.contains(pos):
+                show_video(ref_video_file)
+                core.wait(0.3)
             
             # Vérifier le bouton suivant
             if next_button.contains(pos):
