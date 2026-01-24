@@ -25,6 +25,9 @@ REFERENCES = ['Center_Book_arrival', 'Right_Book_arrival',
               'Center_Newspaper',    'Right_Newspaper']
 CONDITIONS = ['Original', 'Fehn_c', 'Fehn_i', 'Holes', 'ICIP_TMM', 'ICME']
 VIDEO_FOLDER = r'IRCCyN_IVC_DIBR_Videos\Videos'
+VIDEO_TEST = r'IRCCyN_IVC_DIBR_Videos\Test_Videos'
+
+
 CSV_PATH = r'results'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -97,6 +100,136 @@ event.waitKeys(keyList=['space'])
 
 # ===== VARIABLES POUR L'INTERFACE =====
 mouse = event.Mouse(win=win)
+
+
+# ===== PHASE DE TEST =====
+def run_test_phase():
+    """Phase de test pour familiariser le participant avec l'interface"""
+    test_instructions = visual.TextStim(
+        win,
+        text="""PHASE DE TEST
+
+Avant de commencer l'expérience, vous allez tester l'interface.
+
+Cette phase vous permet de :
+- Vérifier que les vidéos se lisent correctement
+- Vous familiariser avec les boutons et les curseurs de notation
+- Poser des questions à l'expérimentateur si nécessaire
+
+Vous allez voir 3 vidéos de test à évaluer.
+
+Appuyez sur ESPACE pour commencer le test""",
+        height=0.03,
+        wrapWidth=0.9
+    )
+    
+    test_instructions.draw()
+    win.flip()
+    event.waitKeys(keyList=['space'])
+    
+    # Créer un trial de test avec 3 vidéos
+    test_labels = ['A', 'B', 'C']
+    buttons, sliders, button_labels = create_rating_interface(test_labels[:3])
+    
+    # Adapter la position pour 3 vidéos au lieu de 6
+    for i in range(3):
+        x_pos = -0.25 + i * 0.25
+        buttons[i].pos = [x_pos, 0.35]
+        button_labels[i].pos = [x_pos, 0.35]
+        sliders[i].pos = [x_pos, -0.05]
+    
+    trial_text = visual.TextStim(
+        win,
+        text="PHASE DE TEST\n\nCliquez sur les boutons pour voir les vidéos de test",
+        pos=[0, 0.45],
+        height=0.03
+    )
+    
+    next_button = visual.Rect(
+        win,
+        width=0.2,
+        height=0.08,
+        pos=[0, -0.45],
+        fillColor='darkgreen',
+        lineColor='white'
+    )
+    next_label = visual.TextStim(
+        win,
+        text='Continuer',
+        pos=[0, -0.45],
+        height=0.03
+    )
+    
+    # Boucle de test
+    continue_test = True
+    while continue_test:
+        trial_text.draw()
+        
+        for i in range(3):
+            buttons[i].draw()
+            button_labels[i].draw()
+            sliders[i].draw()
+        
+        next_button.draw()
+        next_label.draw()
+        
+        win.flip()
+        
+        if mouse.getPressed()[0]:
+            pos = mouse.getPos()
+            
+            # Vérifier les boutons vidéo
+            for i, button in enumerate(buttons[:3]):
+                if button.contains(pos):
+                    # Afficher une vidéo de test ou un message
+                    #test_video = f"{VIDEO_FOLDER}test_{test_labels[i]}.mp4"
+                    test_video = VIDEO_TEST + f"/Book_arrival_A{i}_10_to_8.avi"
+
+                    show_video(test_video)
+                    core.wait(0.3)
+            
+            # Vérifier le bouton suivant
+            if next_button.contains(pos):
+                all_rated = all(slider.rating is not None for slider in sliders[:3])
+                if all_rated:
+                    continue_test = False
+                    core.wait(0.3)
+                else:
+                    warning = visual.TextStim(
+                        win,
+                        text="Veuillez noter toutes les vidéos de test",
+                        pos=[0, -0.35],
+                        height=0.025,
+                        color='red'
+                    )
+                    warning.draw()
+                    win.flip()
+                    core.wait(1.5)
+        
+        if 'escape' in event.getKeys():
+            win.close()
+            core.quit()
+    
+    # Message de fin de phase de test
+    ready_text = visual.TextStim(
+        win,
+        text="""Fin de la phase de test !
+
+Avez-vous des questions avant de commencer l'expérience ?
+
+Si vous êtes prêt(e), appuyez sur ESPACE pour commencer l'expérience réelle.
+Sinon, appuyez sur ÉCHAP pour quitter.""",
+        height=0.03,
+        wrapWidth=0.9
+    )
+    
+    ready_text.draw()
+    win.flip()
+    keys = event.waitKeys(keyList=['space', 'escape'])
+    if 'escape' in keys:
+        win.close()
+        core.quit()
+
 
 def create_rating_interface(labels):
     """Crée les éléments de l'interface de notation"""
@@ -306,6 +439,9 @@ def show_video(video_path):
 # ===== BOUCLE PRINCIPALE =====
 all_results = []
 df_videos = pd.read_csv(CSV_PATH + "/df_videos_processed.csv")
+
+# Lancer la phase de test
+run_test_phase()
 
 for trial_num, trial in enumerate(trials_list, 1):
     ref = trial['reference']
