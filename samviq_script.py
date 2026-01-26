@@ -50,18 +50,19 @@ kb = keyboard.Keyboard()
 # ===== TEXTES D'INSTRUCTIONS =====
 instructions = visual.TextStim(
     win,
-    text="""Bienvenue dans cette expérience d'évaluation de qualité vidéo.
+    text="""Welcome to this video quality assessment experiment.
 
-Vous allez évaluer différentes versions de plusieurs vidéos.
-Pour chaque référence, vous verrez 6 versions à comparer.
+You will evaluate different syhtnesized views based on reference videos.
+For each reference, you will see 6 versions to compare.
 
 INSTRUCTIONS:
-- Cliquez sur les boutons pour voir/revoir chaque vidéo
-- Utilisez les curseurs pour noter la qualité (0 = mauvaise, 100 = excellente)
-- Vous pouvez revoir les vidéos autant de fois que nécessaire
-- Une fois satisfait de vos notations, cliquez sur "Suivant"
+- Click on the REF button to view the reference video
+- Click the buttons with letters to view/review each version of the video 
+- Use the sliders to rate the quality (0 = poor, 100 = excellent)
+- You can review the videos as many times as necessary
+- Once satisfied with your ratings, click "Next"
 
-Appuyez sur ESPACE pour commencer""",
+Press SPACE to begin""",
     height=0.03,
     wrapWidth=0.9
 )
@@ -107,18 +108,18 @@ def run_test_phase():
     """Phase de test pour familiariser le participant avec l'interface"""
     test_instructions = visual.TextStim(
         win,
-        text="""PHASE DE TEST
+        text="""TEST PHASE
 
-Avant de commencer l'expérience, vous allez tester l'interface.
+Before starting the experiment, you will test the interface.
 
-Cette phase vous permet de :
-- Vérifier que les vidéos se lisent correctement
-- Vous familiariser avec les boutons et les curseurs de notation
-- Poser des questions à l'expérimentateur si nécessaire
+This phase allows you to:
+- Verify that videos play correctly
+- Familiarize yourself with the buttons and rating sliders
+- Ask the experimenter any questions if needed
 
-Vous allez voir 3 vidéos de test à évaluer.
+You will see 3 test videos to evaluate.
 
-Appuyez sur ESPACE pour commencer le test""",
+Press SPACE to begin the test""",
         height=0.03,
         wrapWidth=0.9
     )
@@ -145,7 +146,7 @@ Appuyez sur ESPACE pour commencer le test""",
 
     trial_text = visual.TextStim(
         win,
-        text="PHASE DE TEST\n\nCliquez sur les boutons pour voir les vidéos de test\nCliquez sur REF pour voir la référence",
+        text="TEST PHASE\n\nClick the buttons to view test videos\nClick REF to view the reference",
         pos=[0, 0.40],
         height=0.03
     )
@@ -160,7 +161,7 @@ Appuyez sur ESPACE pour commencer le test""",
     )
     next_label = visual.TextStim(
         win,
-        text='Continuer',
+        text='Continue',
         pos=[0, -0.45],
         height=0.03
     )
@@ -216,7 +217,7 @@ Appuyez sur ESPACE pour commencer le test""",
                 else:
                     warning = visual.TextStim(
                         win,
-                        text="Veuillez noter toutes les vidéos de test",
+                        text="Please rate all test videos",
                         pos=[0, -0.35],
                         height=0.025,
                         color='red'
@@ -232,12 +233,12 @@ Appuyez sur ESPACE pour commencer le test""",
     # Message de fin de phase de test
     ready_text = visual.TextStim(
         win,
-        text="""Fin de la phase de test !
+        text="""End of test phase!
 
-Avez-vous des questions avant de commencer l'expérience ?
+Do you have any questions before starting the actual experiment?
 
-Si vous êtes prêt(e), appuyez sur ESPACE pour commencer l'expérience réelle.
-Sinon, appuyez sur ÉCHAP pour quitter.""",
+If you are ready, press SPACE to begin the actual experiment.
+Otherwise, press ESC to quit.""",
         height=0.03,
         wrapWidth=0.9
     )
@@ -392,7 +393,7 @@ def show_video(video_path):
         # Fichier introuvable: afficher un message explicite
         msg = visual.TextStim(
             win,
-            text=f"Fichier vidéo introuvable:\n{video_path}\n\nVérifiez le chemin et le dossier 'IRCCyN_IVC_DIBR_Videos/\nVideos'.\n(Appuyez sur ESPACE)",
+            text=f"Video file not found:\n{video_path}\n\nCheck the path and folder 'IRCCyN_IVC_DIBR_Videos/\nVideos'.\n(Press SPACE)",
             height=0.04
         )
         msg.draw()
@@ -484,7 +485,7 @@ def show_video(video_path):
         # Afficher un message d'erreur à l'utilisateur
         error_msg = visual.TextStim(
             win,
-            text=f"Erreur de lecture vidéo:\n{str(e)}\n\n(Appuyez sur ESPACE)",
+            text=f"Video playback error:\n{str(e)}\n\n(Press SPACE)",
             height=0.03,
             color='red'
         )
@@ -511,7 +512,7 @@ for trial_num, trial in enumerate(trials_list, 1):
     # Instructions pour ce trial
     trial_text = visual.TextStim(
         win,
-        text=f"Référence {trial_num}/{len(trials_list)}:\n\nCliquez sur les boutons pour voir les vidéos\nCliquez sur REF pour revoir la référence",
+        text=f"Reference {trial_num}/{len(trials_list)}:\n\nClick the buttons to view the videos\nClick REF to review the reference",
         pos=[0, 0.40],
         height=0.03
     )
@@ -526,7 +527,7 @@ for trial_num, trial in enumerate(trials_list, 1):
     )
     next_label = visual.TextStim(
         win,
-        text='Suivant',
+        text='Next',
         pos=[0, -0.45],
         height=0.03
     )
@@ -588,7 +589,7 @@ for trial_num, trial in enumerate(trials_list, 1):
                 else:
                     warning = visual.TextStim(
                         win,
-                        text="Veuillez noter toutes les vidéos avant de continuer",
+                        text="Please rate all videos before continuing",
                         pos=[0, -0.35],
                         height=0.025,
                         color='red'
@@ -622,7 +623,7 @@ df.to_csv(f"{filename}.csv", index=False)
 # ===== MESSAGE DE FIN =====
 end_text = visual.TextStim(
     win,
-    text="Merci de votre participation!\n\nAppuyez sur ESPACE pour quitter",
+    text="Thank you for your participation!\n\nPress SPACE to quit",
     height=0.04
 )
 end_text.draw()
