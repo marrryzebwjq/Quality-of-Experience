@@ -52,7 +52,7 @@ instructions = visual.TextStim(
     win,
     text="""Welcome to this video quality assessment experiment.
 
-You will evaluate different syhtnesized views based on reference videos.
+You will evaluate different synthesized views based on reference videos.
 For each reference, you will see 6 versions to compare.
 
 INSTRUCTIONS:
