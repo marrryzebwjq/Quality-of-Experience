@@ -1,10 +1,11 @@
 # Data
 IRCCyN_IVC_DIBR_Videos/
 Subjective_Data/
+tmp_saves/
+BYOE_sachot_point/
 
 # Archive
 Subjective_Data.zip
-tmp_saves/
 
 # Config files
 config.py
